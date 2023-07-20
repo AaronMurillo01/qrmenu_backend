@@ -1,0 +1,1 @@
+web: gunicorn qrmenu_backend.wsgi
