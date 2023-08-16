@@ -87,3 +87,4 @@ class OrderDetail(generics.UpdateAPIView):
   permission_classes = [permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.OrderSerializer
   queryset = models.Order.objects.all()
+  
