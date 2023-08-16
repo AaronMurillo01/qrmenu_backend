@@ -141,3 +141,5 @@ try:
     django_heroku.settings(locals())
 except:
     pass
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'
