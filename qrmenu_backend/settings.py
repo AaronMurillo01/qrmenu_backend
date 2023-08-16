@@ -82,7 +82,7 @@ WSGI_APPLICATION = 'qrmenu_backend.wsgi.application'
 import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL', 'postgres://user:password@localhost:5432/mydatabase'))
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
 
