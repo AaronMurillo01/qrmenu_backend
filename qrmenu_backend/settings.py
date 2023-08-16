@@ -144,10 +144,3 @@ except:
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-import os
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-HEROKU_HOST = os.environ.get('HEROKU_HOST')
-
-if HEROKU_HOST:
-    ALLOWED_HOSTS.append(HEROKU_HOST)
