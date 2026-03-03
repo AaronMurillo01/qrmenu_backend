@@ -8,12 +8,14 @@ from django.conf import settings
 from django.shortcuts import render
 
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 from . import models, serializers, permissions
 
 logger = logging.getLogger(__name__)
 
 
 class PlaceList(generics.ListCreateAPIView):
+  permission_classes = [IsAuthenticated]
   serializer_class = serializers.PlaceSerializer
 
   def get_queryset(self):
@@ -28,20 +30,20 @@ class PlaceDetail(generics.RetrieveUpdateDestroyAPIView):
   queryset = models.Place.objects.all()
 
 class CategoryList(generics.CreateAPIView):
-  permission_classes = [permissions.PlaceOwnerOrReadOnly]
+  permission_classes = [IsAuthenticated, permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.CategorySerializer
 
 class CategoryDetail(generics.UpdateAPIView, generics.DestroyAPIView):
-  permission_classes = [permissions.PlaceOwnerOrReadOnly]
+  permission_classes = [IsAuthenticated, permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.CategorySerializer
   queryset = models.Category.objects.all()
 
 class MenuItemList(generics.CreateAPIView):
-  permission_classes = [permissions.PlaceOwnerOrReadOnly]
+  permission_classes = [IsAuthenticated, permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.MenuItemSerializer
 
 class MenuItemDetail(generics.UpdateAPIView, generics.DestroyAPIView):
-  permission_classes = [permissions.PlaceOwnerOrReadOnly]
+  permission_classes = [IsAuthenticated, permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.MenuItemSerializer
   queryset = models.MenuItem.objects.all()
 
@@ -79,6 +81,8 @@ def create_payment_intent(request):
     })
   except KeyError as e:
     return JsonResponse({"success": False, "error": f"Missing field: {e}"}, status=400)
+  except json.JSONDecodeError:
+    return JsonResponse({"success": False, "error": "Invalid JSON"}, status=400)
   except stripe.error.CardError as e:
     logger.warning("Card error during payment: %s", e.user_message)
     return JsonResponse({"success": False, "error": e.user_message}, status=400)
@@ -90,12 +94,17 @@ def create_payment_intent(request):
     return JsonResponse({"success": False, "error": "Internal server error"}, status=500)
 
 class OrderList(generics.ListAPIView):
+  permission_classes = [IsAuthenticated]
   serializer_class = serializers.OrderSerializer
 
   def get_queryset(self):
-    return models.Order.objects.filter(place__owner_id=self.request.user.id, place_id=self.request.GET.get('place'))
+    queryset = models.Order.objects.filter(place__owner_id=self.request.user.id)
+    place_id = self.request.GET.get('place')
+    if place_id:
+      queryset = queryset.filter(place_id=place_id)
+    return queryset
 
 class OrderDetail(generics.UpdateAPIView):
-  permission_classes = [permissions.PlaceOwnerOrReadOnly]
+  permission_classes = [IsAuthenticated, permissions.PlaceOwnerOrReadOnly]
   serializer_class = serializers.OrderSerializer
   queryset = models.Order.objects.all()
