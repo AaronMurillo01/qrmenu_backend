@@ -1,1 +1,1 @@
-web: gunicorn qrmenu_backend.wsgi
+web: gunicorn qrmenu_backend.wsgi:application

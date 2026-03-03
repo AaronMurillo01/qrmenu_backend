@@ -10,23 +10,30 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# SECURITY: Read secret key from environment variable
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-llgjw@(ulm@%(=!qw$c=%uo1kj9a76o+rdy9vi**dh$7qmh8bm'
+)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
+# SECURITY: DEBUG is off by default in production — set DEBUG=True in your .env for local dev
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-llgjw@(ulm@%(=!qw$c=%uo1kj9a76o+rdy9vi**dh$7qmh8bm'
+# Hosts: set ALLOWED_HOSTS as comma-separated in env, e.g. "myapp.onrender.com,localhost"
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['qrmenu-28f71a8550a0.herokuapp.com', 'localhost', '127.0.0.1']
+# Render sets RENDER_EXTERNAL_HOSTNAME automatically
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
@@ -38,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'core',
     'djoser',
     'rest_framework',
@@ -46,13 +54,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'qrmenu_backend.urls'
@@ -78,11 +87,17 @@ WSGI_APPLICATION = 'qrmenu_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
-import dj_database_url
+# Uses DATABASE_URL in production (Render sets this automatically for managed Postgres).
+# Falls back to SQLite for local development.
 
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+    'default': dj_database_url.config(
+        default=os.environ.get(
+            'DATABASE_URL',
+            f'sqlite:///{BASE_DIR / "db.sqlite3"}'
+        ),
+        conn_max_age=600,
+    )
 }
 
 
@@ -123,6 +138,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
@@ -135,13 +153,17 @@ REST_FRAMEWORK = {
     )
 }
 
-STRIPE_API_SECRET_KEY = "sk_test_51MvZyLEUP5DwlQwsWb9QmwJNdZAvdlnuX36tly249R19chU8UyHKBVEwNxmXTneCXaLEZbmn31P7Ac1arAq5mVyn00Cb9Pkke2"
+# Stripe — read from environment, fall back to test key for local dev only
+STRIPE_API_SECRET_KEY = os.environ.get(
+    'STRIPE_API_SECRET_KEY',
+    'sk_test_51MvZyLEUP5DwlQwsWb9QmwJNdZAvdlnuX36tly249R19chU8UyHKBVEwNxmXTneCXaLEZbmn31P7Ac1arAq5mVyn00Cb9Pkke2'
+)
 
-try:
-    import django_heroku
-    django_heroku.settings(locals())
-except:
-    pass
-
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-
+# CORS — set CORS_ALLOWED_ORIGINS as comma-separated in env for production,
+# e.g. "https://myapp.netlify.app,https://myapp.vercel.app"
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True

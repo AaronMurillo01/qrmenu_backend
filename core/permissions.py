@@ -31,5 +31,5 @@ class PlaceOwnerOrReadOnly(permissions.BasePermission):
         data = json.loads(request.body)
         models.Place.objects.get(pk=data["place"], owner_id=request.user.id)
       return True
-    except:
+    except (json.JSONDecodeError, KeyError, models.Place.DoesNotExist):
       return False
